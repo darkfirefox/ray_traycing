@@ -1,0 +1,7 @@
+struct ObjectFile {
+    
+};
+
+class ObjectLoader {
+
+};
