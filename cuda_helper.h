@@ -8,8 +8,12 @@
 #include "metal.h"
 #include "lambertian.h"
 #include "dielectric.h"
+#include "checker_board.h"
+#include "board.h"
 
 #define MAX_RECURSION 10
+#define SPHERE_COUNTS 100
+#define PLANE_COUNTS 1
 
 #define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
 
@@ -97,33 +101,26 @@ __global__ void createWorld(Hittable **d_list, Hittable **d_world, Camera **d_ca
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
         curandState localState = *state;
-        d_list[0] = new Sphere(Vec3(0,-1000,-1), 1000,
-                                             new Lambertian(Vec3(0.2, 0.2, 0.2)));
+        d_list[0] = new CheckerBoard();
         int i = 1;
-        int counts = 22 * 22 + 1;
-        for (int a = -11; a < 11; a++)
+        for (int a = -5; a < 5; a++)
         {
-            for (int b = -11; b < 11; b++)
+            for (int b = -5; b < 5; b++)
             {
                 float chooseMat = RND;
                 Vec3 center(a + RND, 0.2, b + RND);
-                if (chooseMat < 0.4f)
-                {
-                    d_list[i++] = new Sphere(center, RND,
-                                             new Lambertian(Vec3(RND * RND, RND * RND, RND * RND)));
-                }
-                else if (chooseMat < 0.8f)
+                if (chooseMat < 0.5f)
                 {
                     d_list[i++] = new Sphere(center, RND,
                                              new Metal(Vec3(0.5f * (1.0f + RND), 0.5f * (1.0f + RND), 0.5f * (1.0f + RND)), 0.5f * RND));
                 }
                 else
                 {
-                    d_list[i++] = new Sphere(center, RND, new Dielectric(1.5));
+                    d_list[i++] = new Sphere(center, RND, new Dielectric(1.5*RND));
                 }
             }
         }
-        *d_world = new HittableList(d_list, counts);
+        *d_world = new HittableList(d_list, SPHERE_COUNTS + PLANE_COUNTS);
         Vec3 lookFrom(13, 2, 3);
         Vec3 lookAt(0, 0, 0);
         float distToFocus = 1.0;
@@ -139,8 +136,12 @@ __global__ void createWorld(Hittable **d_list, Hittable **d_world, Camera **d_ca
 
 __global__ void freeWorld(Hittable **d_list, Hittable **d_world, Camera **d_camera)
 {
-    int counts = 22 * 22 + 1;
-    for (int i = 0; i < counts; i++)
+    for (int i = 0; i < PLANE_COUNTS; i++)
+    {
+        delete ((CheckerBoard *)d_list[i])->material;
+        delete d_list[i];
+    }
+    for (int i = PLANE_COUNTS; i < PLANE_COUNTS + SPHERE_COUNTS; i++)
     {
         delete ((Sphere *)d_list[i])->material;
         delete d_list[i];

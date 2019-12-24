@@ -37,7 +37,7 @@ int main()
     checkCudaErrors(cudaDeviceSynchronize());
 
     Hittable **d_list;
-    checkCudaErrors(cudaMalloc((void **)&d_list, (22*22+1) * sizeof(Hittable *)));
+    checkCudaErrors(cudaMalloc((void **)&d_list, (SPHERE_COUNTS + PLANE_COUNTS) * sizeof(Hittable *)));
     Hittable **d_world;
     checkCudaErrors(cudaMalloc((void **)&d_world, sizeof(Hittable *)));
     Camera **d_camera;
